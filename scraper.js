@@ -300,6 +300,43 @@ const formatCarMessage = (car) => {
 }
 
 const program = async () => {
+    // Check if we have GitHub Variables for multiple projects
+    const envProjects = process.env.SCRAPER_PROJECTS;
+    
+    if (envProjects) {
+        try {
+            console.log('Using GitHub Variables for configuration');
+            const projects = JSON.parse(envProjects);
+            
+            if (Array.isArray(projects) && projects.length > 0) {
+                await Promise.all(projects.filter(project => {
+                    if (project.disabled) {
+                        console.log(`Topic "${project.topic}" is disabled. Skipping.`);
+                    }
+                    return !project.disabled;
+                }).map(async project => {
+                    await scrape(project.topic, project.url);
+                }));
+                return;
+            }
+        } catch (error) {
+            console.error('Error parsing SCRAPER_PROJECTS:', error.message);
+            console.log('Falling back to individual variables or config.json');
+        }
+    }
+    
+    // Check if we have individual environment variables for single project
+    const envTopic = process.env.SCRAPER_TOPIC;
+    const envUrl = process.env.SCRAPER_URL;
+    
+    if (envTopic && envUrl) {
+        console.log('Using individual environment variables for configuration');
+        await scrape(envTopic, envUrl);
+        return;
+    }
+    
+    // Fall back to config.json for multiple projects
+    console.log('Using config.json for configuration');
     await Promise.all(config.projects.filter(project => {
         if (project.disabled) {
             console.log(`Topic "${project.topic}" is disabled. Skipping.`);

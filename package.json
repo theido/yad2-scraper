@@ -5,7 +5,9 @@
   "author": "Niv Ezra",
   "license": "MIT",
   "scripts": {
-    "scrape": "node scraper.js"
+    "scrape": "node scraper.js",
+    "github-vars": "node generate-github-vars.js",
+    "github-vars:update": "node generate-github-vars.js --update"
   },
   "dependencies": {
     "cheerio": "^1.0.0-rc.12",

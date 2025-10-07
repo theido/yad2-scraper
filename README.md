@@ -24,9 +24,58 @@ To start using the scraper simply:
    # Edit .env with your actual API_TOKEN and CHAT_ID
    ```
 4. **For GitHub Actions**: Add `API_TOKEN` and `CHAT_ID` as GitHub secrets (more secure - recommended).
-5. Add a `topic` in the `config.json` - name for the scraping topic.
-6. Add a `url` in the `config.json` - Yad2 url to scrape - the scraper does not support pagination so be specific and use Yad2 filters for better results. 
-7. **Local**: Run `npm run scrape` | **GitHub**: Push and wait for the workflow to run.
+
+### Configuration Options:
+
+#### ⚙️ **Option 1: GitHub Variables (Recommended for GitHub Actions)**
+
+**For Multiple Projects:**
+1. **Automatic way**: Run `npm run github-vars:update` (requires GitHub CLI)
+2. **Manual way**: Run `npm run github-vars` to generate the JSON, then:
+   - Go to your repository Settings → Secrets and variables → Actions
+   - Add this repository variable: `SCRAPER_PROJECTS`
+   - Set the value to the generated JSON array of projects:
+   ```json
+   [
+     {
+       "topic": "סורנטו",
+       "url": "https://www.yad2.co.il/vehicles/cars?manufacturer=48&model=10718&year=2023--1",
+       "disabled": false
+     },
+     {
+       "topic": "טויוטה",
+       "url": "https://www.yad2.co.il/vehicles/cars?manufacturer=20&model=12345&year=2023--1",
+       "disabled": false
+     }
+   ]
+   ```
+
+**For Single Project (Backward Compatible):**
+- `SCRAPER_TOPIC`: Your topic name (e.g., "סורנטו")
+- `SCRAPER_URL`: Your Yad2 search URL
+
+**GitHub CLI Setup (for automatic updates):**
+1. Install GitHub CLI: https://cli.github.com/
+2. Authenticate: `gh auth login`
+3. Use: `npm run github-vars:update`
+
+#### 📝 **Option 2: Manual config.json**
+Edit `config.json` directly:
+```json
+{
+  "projects": [
+    {
+      "topic": "סורנטו",
+      "url": "https://www.yad2.co.il/vehicles/cars?manufacturer=48&model=10718&year=2023--1",
+      "disabled": false
+    }
+  ]
+}
+```
+
+### Running:
+- **Local**: `npm run scrape`
+- **GitHub**: Push and wait for the workflow to run
 
 If you want to disable a scraping topic, you can add a `"disabled": true` field in the `config.json` under a project in the projects list:
 ```
