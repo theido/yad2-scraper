@@ -1,10 +1,9 @@
 {
-  "telegramApiToken": null,
-  "chatId": null,
   "projects": [
     {
-      "topic": "",
-      "url": ""
+      "topic": "סורנטו",
+      "url": "https://www.yad2.co.il/vehicles/cars?manufacturer=48&model=10718&year=2023--1",
+      "disabled": false
     }
   ]
 }

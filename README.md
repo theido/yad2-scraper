@@ -18,10 +18,15 @@ When new items are uploaded, the next Github actions run will push the items to 
 To start using the scraper simply:
 1. Clone / fork the repository.
 2. Set up a Telegram bot.
-3. Add the telegram api token and chat ID. You can do it or in the `config.json` file, or in the Github secrets (more secure - recommended) `API_TOKEN` and `CHAT_ID` secrets.
-4. Add a `topic` in the `config.json` - name for the scraping topic.
-5. Add a `url` in the `config.json` - Yad2 url to scrape - the scraper does not support pagination so be specific and use Yad2 filters for better results. 
-6. Push and wait for the workflow to run.
+3. **For local development**: Copy `.env.example` to `.env` and add your credentials:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your actual API_TOKEN and CHAT_ID
+   ```
+4. **For GitHub Actions**: Add `API_TOKEN` and `CHAT_ID` as GitHub secrets (more secure - recommended).
+5. Add a `topic` in the `config.json` - name for the scraping topic.
+6. Add a `url` in the `config.json` - Yad2 url to scrape - the scraper does not support pagination so be specific and use Yad2 filters for better results. 
+7. **Local**: Run `npm run scrape` | **GitHub**: Push and wait for the workflow to run.
 
 If you want to disable a scraping topic, you can add a `"disabled": true` field in the `config.json` under a project in the projects list:
 ```
