@@ -2,10 +2,10 @@ name: Yad2 Scraper
 
 on:
   schedule:
-    - cron: '*/15 5-17 * * *'
+    - cron: "0 9,17 * * *"
   workflow_dispatch:
     branches:
-      - '**'
+      - "**"
 
 jobs:
   scraper:
