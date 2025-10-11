@@ -1,13 +1,8 @@
 {
   "projects": [
     {
-      "topic": "סורנטו",
-      "url": "https://www.yad2.co.il/vehicles/cars?manufacturer=48&model=10718&year=2023--1",
-      "disabled": false
-    },
-    {
-      "topic": "אקספלורר",
-      "url": "https://www.yad2.co.il/vehicles/cars?manufacturer=43&model=10593&year=2022--1&yad2_source=latestSearchesPage",
+      "topic": "וילות",
+      "url": "https://www.yad2.co.il/realestate/forsale?minRooms=5&property=5%2C6%2C39&multiCity=6300%2C8600&zoom=13",
       "disabled": false
     }
   ]
