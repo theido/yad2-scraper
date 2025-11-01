@@ -1,0 +1,7 @@
+
+> yad2-scraper@1.0.0 scrape
+> node scraper.js
+
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
+Using config.json for configuration
+Starting scanning וילות on link: https://www.yad2.co.il/realestate/forsale?minRooms=5&property=5%2C6%2C39&multiCity=6300%2C8600&zoom=13

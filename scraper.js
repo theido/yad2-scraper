@@ -44,68 +44,68 @@ const scrapeItemsAndExtractDetails = async (url) => {
     if (titleText === "ShieldSquare Captcha") {
         throw new Error("Bot detection");
     }
-    
+
     // Find all car listing links - be more precise
     let $carLinks = $('a[href*="/item/"]');
-    
+
     // Also look for links that start with item/ (without leading slash)
     const $carLinksNoSlash = $('a[href*="item/"]').filter((i, el) => {
         const href = $(el).attr('href');
         return href && href.startsWith('item/');
     });
-    
+
     // Combine both sets
     $carLinks = $carLinks.add($carLinksNoSlash);
-    
+
     console.log(`Found ${$carLinks.length} car listing links`);
-    
+
     // If we still don't find enough, try looking in specific containers
     if ($carLinks.length < 15) {
         console.log(`Found only ${$carLinks.length} car links, checking containers...`);
-        
+
         // Look for links in car-related containers
         const $containers = $('[data-testid*="item"], .promotion-layout_container___TZ9j, .promotion-layout-no-footer_container__zrTOu, .ultra-plus_box__rGgJn, .agency-item-no-footer_box__0Ss8o');
         console.log(`Found ${$containers.length} potential containers`);
-        
+
         const $containerLinks = $containers.find('a').filter((i, el) => {
             const href = $(el).attr('href');
             return href && (href.includes('/item/') || href.startsWith('item/'));
         });
-        
+
         console.log(`Found ${$containerLinks.length} car links in containers`);
-        
+
         if ($containerLinks.length > $carLinks.length) {
             $carLinks = $containerLinks;
         }
     }
-    
+
     if (!$carLinks || $carLinks.length === 0) {
         throw new Error("Could not find car listings");
     }
-    
+
     console.log(`Found ${$carLinks.length} car listings on the page`);
-    
+
     const carListings = []
     const processedIds = new Set(); // To avoid duplicates
-    
+
     $carLinks.each((_, link) => {
         const $link = $(link);
         const href = $link.attr('href');
-        
+
         // Skip if not a valid car listing link
         if (!href || !href.includes('item')) return;
-        
+
         // Extract car ID
         const carId = href.split('/item/')[1]?.split('?')[0] || href.split('item/')[1]?.split('?')[0] || 'unknown';
-        
+
         // Skip if we already processed this car
         if (processedIds.has(carId)) return;
         processedIds.add(carId);
-        
+
         // Extract car details
         const carDetails = {
             id: carId,
-            link: href.startsWith('http') ? href : `https://www.yad2.co.il/vehicles${href}`,
+            link: href.startsWith('http') ? href : `https://www.yad2.co.il/${href}`,
             title: '',
             price: '',
             year: '',
@@ -114,7 +114,7 @@ const scrapeItemsAndExtractDetails = async (url) => {
             image: '',
             agency: ''
         };
-        
+
         // Try multiple selectors for title
         let titleElement = $link.find('[data-nagish="feed-item-section-title"]');
         if (!titleElement.length) {
@@ -123,7 +123,7 @@ const scrapeItemsAndExtractDetails = async (url) => {
         if (titleElement.length) {
             carDetails.title = titleElement.text().trim();
         }
-        
+
         // Try multiple selectors for price
         let priceElement = $link.find('[data-testid="price"]');
         if (!priceElement.length) {
@@ -132,7 +132,7 @@ const scrapeItemsAndExtractDetails = async (url) => {
         if (priceElement.length) {
             carDetails.price = priceElement.text().trim();
         }
-        
+
         // Try multiple selectors for year and hand
         let yearHandElement = $link.find('.feed-item-info-section_yearAndHandBox__H5oQ0 span');
         if (!yearHandElement.length) {
@@ -146,7 +146,7 @@ const scrapeItemsAndExtractDetails = async (url) => {
                 carDetails.hand = parts[1].trim();
             }
         }
-        
+
         // Try multiple selectors for agency
         let locationElement = $link.find('.feed-item-image-section_agencyName__U_wJp');
         if (!locationElement.length) {
@@ -155,7 +155,7 @@ const scrapeItemsAndExtractDetails = async (url) => {
         if (locationElement.length) {
             carDetails.agency = locationElement.text().trim();
         }
-        
+
         // Try multiple selectors for image
         let imgElement = $link.find('[data-testid="image"]').first();
         if (!imgElement.length) {
@@ -164,13 +164,13 @@ const scrapeItemsAndExtractDetails = async (url) => {
         if (imgElement.length) {
             carDetails.image = imgElement.attr('src') || '';
         }
-        
+
         // Add if we have at least a title or valid ID
         if ((carDetails.title || carDetails.id !== 'unknown') && carDetails.id !== 'unknown') {
             carListings.push(carDetails);
         }
     });
-    
+
     console.log(`Extracted ${carListings.length} car listings with details`);
     return carListings;
 }
@@ -192,28 +192,28 @@ const checkIfHasNewItems = async (carListings, topic) => {
             throw new Error(`Could not read / create ${filePath}`);
         }
     }
-    
+
     // Get existing car IDs
     const savedIds = savedListings.map(car => car.id);
-    
+
     // Find new listings
     const newItems = [];
     const allListings = [...savedListings];
-    
+
     carListings.forEach(car => {
         if (!savedIds.includes(car.id)) {
             allListings.push(car);
             newItems.push(car);
         }
     });
-    
+
     // Update the saved file with all listings
     if (newItems.length > 0 || allListings.length !== savedListings.length) {
         const updatedListings = JSON.stringify(allListings, null, 2);
         fs.writeFileSync(filePath, updatedListings);
         await createPushFlagForWorkflow();
     }
-    
+
     return newItems;
 }
 
@@ -224,28 +224,28 @@ const createPushFlagForWorkflow = () => {
 const scrape = async (topic, url) => {
     const apiToken = process.env.API_TOKEN || config.telegramApiToken;
     const chatId = process.env.CHAT_ID || config.chatId;
-    const telenode = new Telenode({apiToken})
+    const telenode = new Telenode({ apiToken })
     try {
         console.log(`Starting scanning ${topic} on link: ${url}`);
         await telenode.sendTextMessage(`🔍 Starting scan for ${topic}...`, chatId)
-        
+
         // Add a small delay to be respectful to the server
         await new Promise(resolve => setTimeout(resolve, 2000));
-        
+
         const carListings = await scrapeItemsAndExtractDetails(url);
         const newItems = await checkIfHasNewItems(carListings, topic);
-        
+
         if (newItems.length > 0) {
             console.log(`Found ${newItems.length} new car listings for ${topic}`);
-            
+
             // Send a summary message first
             await telenode.sendTextMessage(
                 `🚗 Found ${newItems.length} new ${topic} listings!\n\n` +
                 `Total listings found: ${carListings.length}\n\n` +
-                `🔍 Search URL: ${url}`, 
+                `🔍 Search URL: ${url}`,
                 chatId
             );
-            
+
             // Send detailed messages for each new car (limit to 5 to avoid spam)
             const itemsToSend = newItems.slice(0, 5);
             for (const car of itemsToSend) {
@@ -254,17 +254,17 @@ const scrape = async (topic, url) => {
                 // Small delay between messages
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
-            
+
             if (newItems.length > 5) {
                 await telenode.sendTextMessage(
-                    `... and ${newItems.length - 5} more listings! Check the full list on Yad2.`, 
+                    `... and ${newItems.length - 5} more listings! Check the full list on Yad2.`,
                     chatId
                 );
             }
         } else {
             console.log(`No new items found for ${topic}`);
             await telenode.sendTextMessage(
-                `✅ No new ${topic} listings found.\nTotal listings: ${carListings.length}\n\n🔍 Search URL: ${url}`, 
+                `✅ No new ${topic} listings found.\nTotal listings: ${carListings.length}\n\n🔍 Search URL: ${url}`,
                 chatId
             );
         }
@@ -281,33 +281,33 @@ const scrape = async (topic, url) => {
 
 const formatCarMessage = (car) => {
     let message = `🚗 *${car.title}*\n`;
-    
+
     if (car.price) {
         message += `💰 Price: ${car.price}\n`;
     }
-    
+
     if (car.year && car.hand) {
         message += `📅 ${car.year} • ${car.hand}\n`;
     }
-    
+
     if (car.agency) {
         message += `🏢 ${car.agency}\n`;
     }
-    
+
     message += `🔗 [View Listing](${car.link})`;
-    
+
     return message;
 }
 
 const program = async () => {
     // Check if we have GitHub Variables for multiple projects
     const envProjects = process.env.SCRAPER_PROJECTS;
-    
+
     if (envProjects) {
         try {
             console.log('Using GitHub Variables for configuration');
             const projects = JSON.parse(envProjects);
-            
+
             if (Array.isArray(projects) && projects.length > 0) {
                 await Promise.all(projects.filter(project => {
                     if (project.disabled) {
@@ -324,17 +324,17 @@ const program = async () => {
             console.log('Falling back to individual variables or config.json');
         }
     }
-    
+
     // Check if we have individual environment variables for single project
     const envTopic = process.env.SCRAPER_TOPIC;
     const envUrl = process.env.SCRAPER_URL;
-    
+
     if (envTopic && envUrl) {
         console.log('Using individual environment variables for configuration');
         await scrape(envTopic, envUrl);
         return;
     }
-    
+
     // Fall back to config.json for multiple projects
     console.log('Using config.json for configuration');
     await Promise.all(config.projects.filter(project => {
