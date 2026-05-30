@@ -3,7 +3,7 @@ require('dotenv').config();
 
 const cheerio = require('cheerio');
 const Telenode = require('telenode-js');
-const fs = require('fs');
+const { syncListings } = require('./sheets');
 const config = require('./config.json');
 
 const getYad2Response = async (url) => {
@@ -175,52 +175,6 @@ const scrapeItemsAndExtractDetails = async (url) => {
     return carListings;
 }
 
-const checkIfHasNewItems = async (carListings, topic) => {
-    const filePath = `./data/${topic}.json`;
-    let savedListings = [];
-    try {
-        savedListings = require(filePath);
-    } catch (e) {
-        if (e.code === "MODULE_NOT_FOUND") {
-            // Create data directory if it doesn't exist
-            if (!fs.existsSync('data')) {
-                fs.mkdirSync('data');
-            }
-            fs.writeFileSync(filePath, '[]');
-        } else {
-            console.log(e);
-            throw new Error(`Could not read / create ${filePath}`);
-        }
-    }
-
-    // Get existing car IDs
-    const savedIds = savedListings.map(car => car.id);
-
-    // Find new listings
-    const newItems = [];
-    const allListings = [...savedListings];
-
-    carListings.forEach(car => {
-        if (!savedIds.includes(car.id)) {
-            allListings.push(car);
-            newItems.push(car);
-        }
-    });
-
-    // Update the saved file with all listings
-    if (newItems.length > 0 || allListings.length !== savedListings.length) {
-        const updatedListings = JSON.stringify(allListings, null, 2);
-        fs.writeFileSync(filePath, updatedListings);
-        await createPushFlagForWorkflow();
-    }
-
-    return newItems;
-}
-
-const createPushFlagForWorkflow = () => {
-    fs.writeFileSync("push_me", "")
-}
-
 const scrape = async (topic, url) => {
     const apiToken = process.env.API_TOKEN || config.telegramApiToken;
     const chatId = process.env.CHAT_ID || config.chatId;
@@ -233,36 +187,38 @@ const scrape = async (topic, url) => {
         await new Promise(resolve => setTimeout(resolve, 2000));
 
         const carListings = await scrapeItemsAndExtractDetails(url);
-        const newItems = await checkIfHasNewItems(carListings, topic);
+        const spreadsheetId = process.env.GOOGLE_SPREADSHEET_ID;
+        const { newListings, priceChanges } = await syncListings(spreadsheetId, topic, carListings);
 
-        if (newItems.length > 0) {
-            console.log(`Found ${newItems.length} new car listings for ${topic}`);
-
-            // Send a summary message first
+        if (newListings.length > 0) {
+            console.log(`Found ${newListings.length} new listings for ${topic}`);
             await telenode.sendTextMessage(
-                `🚗 Found ${newItems.length} new ${topic} listings!\n\n` +
+                `🚗 Found ${newListings.length} new ${topic} listings!\n\n` +
                 `Total listings found: ${carListings.length}\n\n` +
                 `🔍 Search URL: ${url}`,
                 chatId
             );
-
-            // Send detailed messages for each new car (limit to 5 to avoid spam)
-            const itemsToSend = newItems.slice(0, 5);
+            const itemsToSend = newListings.slice(0, 5);
             for (const car of itemsToSend) {
-                const message = formatCarMessage(car);
-                await telenode.sendTextMessage(message, chatId);
-                // Small delay between messages
+                await telenode.sendTextMessage(formatCarMessage(car), chatId);
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
-
-            if (newItems.length > 5) {
+            if (newListings.length > 5) {
                 await telenode.sendTextMessage(
-                    `... and ${newItems.length - 5} more listings! Check the full list on Yad2.`,
+                    `... and ${newListings.length - 5} more listings! Check the full list on Yad2.`,
                     chatId
                 );
             }
-        } else {
-            console.log(`No new items found for ${topic}`);
+        }
+
+        for (const change of priceChanges) {
+            const msg = `💰 Price change on ${topic}:\n*${change.listing.title}*\n${change.oldPrice} → ${change.newPrice}\n🔗 [View Listing](${change.listing.link})`;
+            await telenode.sendTextMessage(msg, chatId);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+
+        if (newListings.length === 0 && priceChanges.length === 0) {
+            console.log(`No new items or price changes for ${topic}`);
             await telenode.sendTextMessage(
                 `✅ No new ${topic} listings found.\nTotal listings: ${carListings.length}\n\n🔍 Search URL: ${url}`,
                 chatId

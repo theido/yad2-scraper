@@ -12,6 +12,10 @@
   "dependencies": {
     "cheerio": "^1.0.0-rc.12",
     "dotenv": "^17.2.3",
+    "googleapis": "^144.0.0",
     "telenode-js": "^1.1.5"
+  },
+  "devDependencies": {
+    "shadcn": "^4.0.6"
   }
 }
