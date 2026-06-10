@@ -90,13 +90,40 @@ const createPushFlagForWorkflow = () => {
     fs.writeFileSync("push_me", "")
 }
 
-const scrape = async (topic, url) => {
+const createTelegramClient = () => {
     const apiToken = process.env.API_TOKEN || config.telegramApiToken;
     const chatId = process.env.CHAT_ID || config.chatId;
-    const telenode = new Telenode({ apiToken })
+
+    if (!apiToken || !chatId) {
+        console.log('Telegram notifications are disabled: missing API_TOKEN/chat ID');
+        return { telenode: null, chatId: null };
+    }
+
+    return {
+        telenode: new Telenode({ apiToken }),
+        chatId
+    };
+};
+
+const sendTelegramMessageSafe = async (telenode, chatId, message) => {
+    if (!telenode || !chatId) {
+        return false;
+    }
+
+    try {
+        await telenode.sendTextMessage(message, chatId);
+        return true;
+    } catch (error) {
+        console.error(`Telegram notification failed: ${error.message}`);
+        return false;
+    }
+};
+
+const scrape = async (topic, url) => {
+    const { telenode, chatId } = createTelegramClient();
     try {
         console.log(`Starting scanning ${topic} on link: ${url}`);
-        await telenode.sendTextMessage(`🔍 Starting scan for ${topic}...`, chatId)
+        await sendTelegramMessageSafe(telenode, chatId, `🔍 Starting scan for ${topic}...`);
 
         // Add a small delay to be respectful to the server
         await new Promise(resolve => setTimeout(resolve, 2000));
@@ -108,43 +135,46 @@ const scrape = async (topic, url) => {
             console.log(`Found ${newItems.length} new car listings for ${topic}`);
 
             // Send a summary message first
-            await telenode.sendTextMessage(
+            await sendTelegramMessageSafe(
+                telenode,
+                chatId,
                 `🚗 Found ${newItems.length} new ${topic} listings!\n\n` +
                 `Total listings found: ${carListings.length}\n\n` +
-                `🔍 Search URL: ${url}`,
-                chatId
+                `🔍 Search URL: ${url}`
             );
 
             // Send detailed messages for each new car (limit to 5 to avoid spam)
             const itemsToSend = newItems.slice(0, 5);
             for (const car of itemsToSend) {
                 const message = formatCarMessage(car);
-                await telenode.sendTextMessage(message, chatId);
+                await sendTelegramMessageSafe(telenode, chatId, message);
                 // Small delay between messages
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
 
             if (newItems.length > 5) {
-                await telenode.sendTextMessage(
-                    `... and ${newItems.length - 5} more listings! Check the full list on Yad2.`,
-                    chatId
+                await sendTelegramMessageSafe(
+                    telenode,
+                    chatId,
+                    `... and ${newItems.length - 5} more listings! Check the full list on Yad2.`
                 );
             }
         } else {
             console.log(`No new items found for ${topic}`);
-            await telenode.sendTextMessage(
-                `✅ No new ${topic} listings found.\nTotal listings: ${carListings.length}\n\n🔍 Search URL: ${url}`,
-                chatId
+            await sendTelegramMessageSafe(
+                telenode,
+                chatId,
+                `✅ No new ${topic} listings found.\nTotal listings: ${carListings.length}\n\n🔍 Search URL: ${url}`
             );
         }
     } catch (e) {
         let errMsg = e?.message || "";
         if (errMsg) {
-            errMsg = `Error: ${errMsg}`
+            errMsg = `Error: ${errMsg}`;
         }
         console.error(`Error scanning ${topic}:`, errMsg);
-        await telenode.sendTextMessage(`❌ Scan failed for ${topic}:\n${errMsg}\n\n🔍 Search URL: ${url}`, chatId)
-        throw new Error(e)
+        await sendTelegramMessageSafe(telenode, chatId, `❌ Scan failed for ${topic}:\n${errMsg}\n\n🔍 Search URL: ${url}`);
+        throw e;
     }
 }
 
