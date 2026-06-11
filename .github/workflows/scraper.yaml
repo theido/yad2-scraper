@@ -4,8 +4,9 @@ on:
   push:
     branches:
       - main
-  schedule:
-    - cron: "0 9,17 * * *"
+  # Paused on 2026-06-11 per request:
+  # schedule:
+  #   - cron: "0 9,17 * * *"
   workflow_dispatch:
 
 jobs:
