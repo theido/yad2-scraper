@@ -16,10 +16,16 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
 
       - name: Install packages
-        run: yarn install
+        run: yarn install --frozen-lockfile --non-interactive
 
       - name: Setup git config
         run: |
@@ -36,8 +42,14 @@ jobs:
         run: |
           if [ -f ./push_me ]; then
             echo Pushing to Github...
-            git add .
+            git add data/*.json
             DATE=$(date +"%F, %H:%M:%S")
+            if git diff --cached --quiet; then
+              echo "No data changes to commit."
+              exit 0
+            fi
             git commit -m "updated data - $DATE"
             git push
+          else
+            echo "No push flag found; skipping commit."
           fi

@@ -174,8 +174,10 @@ const scrape = async (topic, url) => {
         }
         console.error(`Error scanning ${topic}:`, errMsg);
         await sendTelegramMessageSafe(telenode, chatId, `❌ Scan failed for ${topic}:\n${errMsg}\n\n🔍 Search URL: ${url}`);
-        throw e;
+        return false;
     }
+
+    return true;
 }
 
 const formatCarMessage = (car) => {
