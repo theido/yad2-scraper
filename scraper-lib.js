@@ -220,7 +220,8 @@ const extractListingsFromHtml = (html, fallbackUrl) => {
     return nextDataListings;
   }
 
-  throw new Error('Could not find property listings');
+  console.log('No property listings found in page HTML');
+  return [];
 };
 
 module.exports = {

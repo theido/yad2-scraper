@@ -63,3 +63,19 @@ test('extractListingsFromHtml falls back to __NEXT_DATA__ when no item anchors e
   assert.match(listings[0].title, /גג\/ פנטהאוז/);
   assert.match(listings[0].title, /רות 10/);
 });
+
+test('extractListingsFromHtml returns an empty array when no listings can be found', () => {
+  const html = `<!doctype html>
+  <html>
+    <head>
+      <title>נדל"ן</title>
+    </head>
+    <body>
+      <div>Search shell only</div>
+    </body>
+  </html>`;
+
+  const listings = extractListingsFromHtml(html, 'https://www.yad2.co.il/realestate/forsale?foo=bar');
+
+  assert.deepEqual(listings, []);
+});
