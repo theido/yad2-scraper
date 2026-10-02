@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Yad2 Scraper Admin</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Local admin</p>
+          <h1>Yad2 scraper control panel</h1>
+          <p class="subtitle">Manage topics, per-topic Telegram routing, and per-topic Notion databases from one place.</p>
+        </div>
+        <div class="hero-actions">
+          <button id="refresh-button" class="secondary">Refresh</button>
+          <button id="save-button">Save config</button>
+        </div>
+      </header>
+
+      <section class="status-grid">
+        <article class="status-card">
+          <span class="label">Config path</span>
+          <strong id="config-path">-</strong>
+        </article>
+        <article class="status-card">
+          <span class="label">Projects</span>
+          <strong id="project-count">0</strong>
+        </article>
+        <article class="status-card">
+          <span class="label">Notion access</span>
+          <strong id="notion-status">Checking…</strong>
+        </article>
+      </section>
+
+      <section class="panel settings-panel">
+        <div class="panel-header">
+          <div>
+            <h2>Defaults</h2>
+            <p>Topics can inherit these values when their own fields are empty.</p>
+          </div>
+        </div>
+        <div class="grid two-up">
+          <label>
+            <span>Default Telegram target</span>
+            <input id="defaultTelegramTarget" placeholder="telegram:-1001234567890" />
+          </label>
+          <label>
+            <span>Default Notion database ID</span>
+            <input id="defaultNotionDatabaseId" placeholder="133e3c76-a6a6-428d-87e6-9bdad5e831fa" />
+          </label>
+          <label>
+            <span>Notion token env var</span>
+            <input id="notionTokenEnv" placeholder="NOTION_API_TOKEN" />
+          </label>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Add topic</h2>
+            <p>Create a new tracked Yad2 search with its own route and Notion DB.</p>
+          </div>
+        </div>
+        <form id="project-form" class="project-form">
+          <div class="grid two-up">
+            <label>
+              <span>Topic name</span>
+              <input id="project-topic" required placeholder="וילות" />
+            </label>
+            <label>
+              <span>Telegram target</span>
+              <input id="project-telegramTarget" placeholder="telegram:-5464355735" />
+            </label>
+          </div>
+          <label>
+            <span>Yad2 URL</span>
+            <input id="project-url" required placeholder="https://www.yad2.co.il/realestate/forsale?..." />
+          </label>
+          <div class="grid two-up align-end">
+            <label>
+              <span>Notion database ID</span>
+              <input id="project-notionDatabaseId" placeholder="Paste database ID or pick below" />
+            </label>
+            <label>
+              <span>Choose accessible Notion database</span>
+              <select id="database-select">
+                <option value="">Load accessible databases…</option>
+              </select>
+            </label>
+          </div>
+          <label class="checkbox-row">
+            <input id="project-disabled" type="checkbox" />
+            <span>Disabled</span>
+          </label>
+          <div class="form-actions">
+            <button type="submit">Add topic</button>
+            <button type="button" id="clear-form" class="secondary">Clear</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Tracked topics</h2>
+            <p>Edit routing and Notion database selection per topic.</p>
+          </div>
+        </div>
+        <div id="projects-list" class="projects-list"></div>
+      </section>
+
+      <div id="toast" class="toast hidden"></div>
+    </div>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

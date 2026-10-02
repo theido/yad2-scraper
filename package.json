@@ -6,12 +6,17 @@
   "license": "MIT",
   "scripts": {
     "scrape": "node scraper.js",
+    "scrape:report": "bash scripts/run-local-scraper-cron.sh",
+    "admin": "node admin/server.js",
+    "telegram-admin": "node telegram-admin-bot.js",
+    "test": "node --test",
     "github-vars": "node generate-github-vars.js",
     "github-vars:update": "node generate-github-vars.js --update"
   },
   "dependencies": {
     "cheerio": "^1.0.0-rc.12",
     "dotenv": "^17.2.3",
+    "playwright-core": "^1.61.1",
     "telenode-js": "^1.1.5"
   }
 }

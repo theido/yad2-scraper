@@ -63,19 +63,46 @@ To start using the scraper simply:
 Edit `config.json` directly:
 ```json
 {
+  "settings": {
+    "defaultTelegramTarget": "telegram:-1001234567890",
+    "defaultNotionDatabaseId": "",
+    "notionTokenEnv": "NOTION_API_TOKEN"
+  },
   "projects": [
     {
+      "id": "sorento-main",
       "topic": "סורנטו",
       "url": "https://www.yad2.co.il/vehicles/cars?manufacturer=48&model=10718&year=2023--1",
-      "disabled": false
+      "disabled": false,
+      "telegramTarget": "telegram:-1001234567890",
+      "notionDatabaseId": ""
     }
   ]
 }
 ```
 
+- `defaultTelegramTarget` is the fallback Hermes send target if a topic does not define its own route.
+- `telegramTarget` lets each topic route updates to a different Telegram chat.
+- `notionDatabaseId` lets each topic sync new listings into a different Notion database.
+- `notionTokenEnv` defaults to `NOTION_API_TOKEN`.
+
 ### Running:
 - **Local**: `npm run scrape`
 - **GitHub**: Push and wait for the workflow to run
+
+#### Optional: Chrome-assisted local mode
+
+If Yad2 starts returning Radware / captcha pages, you can switch the local scraper to a real Chrome session:
+
+```bash
+YAD2_FETCH_MODE=chrome YAD2_CHROME_HEADLESS=0 npm run scrape
+```
+
+Notes:
+- the scraper will use `playwright-core` with the local Google Chrome app
+- a persistent Chrome profile is stored under `.yad2-chrome-profile/`
+- if a captcha window opens, solve it in that Chrome session and rerun the scraper
+- in chrome mode, topics are processed sequentially to avoid opening multiple browser windows at once
 
 If you want to disable a scraping topic, you can add a `"disabled": true` field in the `config.json` under a project in the projects list:
 ```
@@ -148,6 +175,58 @@ npm run dev
 ```
 
 The app will be available at `http://localhost:3000`
+
+#### Local admin page for the local scraper
+
+If you want to manage the on-disk `config.json` that the local Hermes cron reads, run:
+
+```bash
+npm run admin
+```
+
+Then open `http://127.0.0.1:4312`. This local admin page can:
+- edit topics in `config.json`
+- assign a `telegramTarget` per topic
+- assign a `notionDatabaseId` per topic
+- browse accessible Notion databases using the current `NOTION_API_TOKEN`
+
+#### Telegram admin commands
+
+If you want to manage `config.json` from your phone through the same Telegram bot token, run:
+
+```bash
+npm run telegram-admin
+```
+
+Required security configuration:
+- `TELEGRAM_ADMIN_CHAT_IDS=-5464355735,123456789` lists the only chats allowed to run admin commands. The admin bot refuses to start without it.
+- `TELEGRAM_ADMIN_POLL_TIMEOUT=30` to control long-poll timeout seconds
+
+Supported commands:
+
+```text
+/topics
+/topic add <topic> | <url>
+/topic remove <topic>
+/topic enable <topic>
+/topic disable <topic>
+/topic set-url <topic> | <url>
+/topic set-telegram <topic> | <telegramTarget>
+/topic set-notion <topic> | <databaseId>
+/topic help
+```
+
+Examples:
+
+```text
+/topics
+/topic add קאמפר | https://www.yad2.co.il/vehicles/cars?manufacturer=4
+/topic disable וילות
+/topic remove קאמפר
+/topic enable סורנטו
+/topic set-url אקספלורר | https://www.yad2.co.il/vehicles/cars?manufacturer=43&model=10593
+/topic set-telegram אקספלורר | telegram:-1001234567890
+```
 
 #### 5. Deploy to Vercel (Recommended)
 
