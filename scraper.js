@@ -221,8 +221,9 @@ const syncTopicToNotion = async (project, settings, newItems) => {
     }
 
     if (!notionToken) {
-        console.log(`Notion sync skipped for ${project.topic}: no token available`);
-        return { skipped: true, reason: 'no_token' };
+        const error = new Error(`Notion token is required for configured topic ${project.topic}`);
+        error.code = 'NOTION_TOKEN_MISSING';
+        throw error;
     }
 
     const result = await syncListingsToNotion({

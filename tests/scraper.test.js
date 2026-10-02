@@ -123,12 +123,35 @@ test('extractCaptchaDigest reads Radware captcha digest from challenge page', ()
 
 test('pageLooksReady stays false on captcha pages and true on listing pages', () => {
   const captchaHtml = `<!doctype html><html><head><title>Radware Bot Manager Captcha</title></head><body></body></html>`;
-  const listingHtml = `<!doctype html><html><head><title>Listings</title><script id="__NEXT_DATA__" type="application/json">{"ok":true}</script></head><body></body></html>`;
+  const emptyNextDataHtml = `<!doctype html><html><head><title>Loading</title><script id="__NEXT_DATA__" type="application/json">{"props":{"pageProps":{}}}</script></head><body></body></html>`;
+  const listingHtml = `<!doctype html><html><head><title>Listings</title><script id="__NEXT_DATA__" type="application/json">{"props":{"pageProps":{"listing":{"token":"abc","price":100}}}}</script></head><body></body></html>`;
   const loadingShellHtml = '<!doctype html><html><head><title>Yad2</title></head><body><div id="root"></div></body></html>';
 
   assert.equal(pageLooksReady(captchaHtml), false);
+  assert.equal(pageLooksReady(emptyNextDataHtml), false);
   assert.equal(pageLooksReady(listingHtml), true);
   assert.equal(pageLooksReady(loadingShellHtml), false);
+});
+
+test('syncTopicToNotion fails when a database is configured without a token', async (t) => {
+  const envNames = ['NOTION_TEST_TOKEN', 'NOTION_API_TOKEN', 'NOTION_API_KEY'];
+  const originalValues = Object.fromEntries(envNames.map((name) => [name, process.env[name]]));
+  envNames.forEach((name) => delete process.env[name]);
+  t.after(() => {
+    envNames.forEach((name) => {
+      if (originalValues[name] === undefined) delete process.env[name];
+      else process.env[name] = originalValues[name];
+    });
+  });
+
+  await assert.rejects(
+    scraper.syncTopicToNotion(
+      { topic: 'וילות', notionDatabaseId: 'db-1' },
+      { notionTokenEnv: 'NOTION_TEST_TOKEN' },
+      [{ id: 'listing-1' }]
+    ),
+    /Notion token/
+  );
 });
 
 test('createTelegramClient uses the effective per-topic Telegram target', () => {

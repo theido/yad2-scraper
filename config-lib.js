@@ -19,13 +19,13 @@ const createProjectId = (topic = 'topic') => {
   return `${slug}-${crypto.randomBytes(4).toString('hex')}`;
 };
 
-const normalizeProject = (project = {}, settings = DEFAULT_SETTINGS) => ({
+const normalizeProject = (project = {}) => ({
   id: project.id || createProjectId(project.topic),
   topic: String(project.topic || '').trim(),
   url: String(project.url || '').trim(),
   disabled: Boolean(project.disabled),
-  telegramTarget: String(project.telegramTarget || project.telegramChatId || settings.defaultTelegramTarget || '').trim(),
-  notionDatabaseId: String(project.notionDatabaseId || settings.defaultNotionDatabaseId || '').trim()
+  telegramTarget: String(project.telegramTarget || project.telegramChatId || '').trim(),
+  notionDatabaseId: String(project.notionDatabaseId || '').trim()
 });
 
 const normalizeConfig = (rawConfig = {}) => {
@@ -48,7 +48,7 @@ const normalizeConfig = (rawConfig = {}) => {
 
   return {
     settings,
-    projects: rawProjects.map((project) => normalizeProject(project, settings))
+    projects: rawProjects.map((project) => normalizeProject(project))
   };
 };
 

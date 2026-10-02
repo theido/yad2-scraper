@@ -33,14 +33,44 @@ const ensureChromeProfileDir = (profileDir) => {
   return profileDir;
 };
 
+const valueContainsListing = (value) => {
+  if (Array.isArray(value)) return value.some(valueContainsListing);
+  if (!value || typeof value !== 'object') return false;
+
+  const hasIdentity = Boolean(value.token || value.orderId || value.id);
+  const hasListingDetails = value.price !== undefined
+    || Boolean(value.address)
+    || Boolean(value.additionalDetails)
+    || Boolean(value.title);
+  if (hasIdentity && hasListingDetails) return true;
+
+  return Object.values(value).some(valueContainsListing);
+};
+
+const nextDataContainsListing = (html) => {
+  const match = String(html || '').match(
+    /<script[^>]*id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i
+  );
+  if (!match) return false;
+
+  try {
+    return valueContainsListing(JSON.parse(match[1]));
+  } catch {
+    return false;
+  }
+};
+
 const pageLooksReady = (html) => {
   if (!html) return false;
-  if (html.includes('__NEXT_DATA__')) return true;
 
   const botReason = detectBotProtection(null, html);
   if (botReason) return false;
 
-  return /(?:href=["'][^"']*\/item\/|data-testid=["'][^"']*item)/i.test(html);
+  if (/(?:href=["'][^"']*\/item\/|data-testid=["'][^"']*item)/i.test(html)) {
+    return true;
+  }
+
+  return nextDataContainsListing(html);
 };
 
 const fetchYad2ViaChrome = async (url) => {
@@ -95,5 +125,6 @@ module.exports = {
   getChromeExecutablePath,
   getChromeProfileDir,
   isHeadlessEnabled,
+  nextDataContainsListing,
   pageLooksReady
 };
