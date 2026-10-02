@@ -7,3 +7,6 @@ push_me
 
 # Environment variables
 .env
+
+# Local Chrome session for captcha-solving fallback
+.yad2-chrome-profile/
