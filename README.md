@@ -199,7 +199,7 @@ npm run telegram-admin
 ```
 
 Required security configuration:
-- `TELEGRAM_ADMIN_CHAT_IDS=-5464355735,123456789` lists the only chats allowed to run admin commands. The admin bot refuses to start without it.
+- `TELEGRAM_ADMIN_CHAT_IDS=-1001234567890,123456789` lists the only chats allowed to run admin commands. The admin bot refuses to start without it.
 - `TELEGRAM_ADMIN_POLL_TIMEOUT=30` to control long-poll timeout seconds
 
 Supported commands:

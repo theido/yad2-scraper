@@ -122,7 +122,7 @@ const buildProjectCard = (project, index) => {
     createProjectField('Telegram target', createProjectInput({
       field: 'telegramTarget',
       value: project.telegramTarget,
-      placeholder: 'telegram:-5464355735'
+      placeholder: 'telegram:-1001234567890'
     })),
     createProjectField('Yad2 URL', createProjectInput({ field: 'url', value: project.url })),
     createProjectField('Notion database ID', createProjectInput({
