@@ -36,6 +36,12 @@ jobs:
         run: |
           export API_TOKEN=${{ secrets.API_TOKEN }}
           export CHAT_ID=${{ secrets.CHAT_ID }}
+          export YAD2_FETCH_MODE=chrome
+          export YAD2_CHROME_HEADLESS=1
+          export YAD2_CHROME_WAIT_MS=60000
+          export CHROME_EXECUTABLE_PATH="$(command -v google-chrome)"
+          test -n "$CHROME_EXECUTABLE_PATH"
+          "$CHROME_EXECUTABLE_PATH" --version
           yarn scrape
 
       - name: Push new json data if needed
