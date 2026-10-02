@@ -53,7 +53,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.redirect('/login?error=user_fetch_failed')
     }
 
-    const user = await userResponse.json()
+    await userResponse.json()
 
     // Store token in httpOnly cookie
     res.setHeader('Set-Cookie', [
