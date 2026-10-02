@@ -5,7 +5,6 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Edit2, Trash2, ExternalLink } from 'lucide-react'
 import { useProjects } from '@/contexts/ProjectsContext'
-import { useToast } from '@/components/ui/use-toast'
 import {
   Dialog,
   DialogContent,
@@ -23,7 +22,6 @@ interface ProjectListProps {
 
 export function ProjectList({ projects, onEdit }: ProjectListProps) {
   const { updateProject, deleteProject } = useProjects()
-  const { toast } = useToast()
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; index: number; project: Project | null }>({
     open: false,
     index: -1,

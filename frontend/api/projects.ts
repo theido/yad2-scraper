@@ -68,7 +68,7 @@ async function updateProjects(token: string, projects: Project[]): Promise<void>
       }
     )
     variableExists = checkResponse.ok
-  } catch (error) {
+  } catch {
     // Variable doesn't exist, will create it
   }
 
@@ -163,10 +163,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       default:
         return res.status(405).json({ error: 'Method not allowed' })
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Projects API error:', error)
     return res.status(500).json({
-      error: error.message || 'Internal server error',
+      error: error instanceof Error ? error.message : 'Internal server error',
     })
   }
 }

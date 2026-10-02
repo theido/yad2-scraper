@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuth } from '@/contexts/AuthContext'
-import { GitHub } from 'lucide-react'
+import { Github } from 'lucide-react'
 
 export default function Login() {
   const { login } = useAuth()
@@ -24,7 +24,7 @@ export default function Login() {
             className="w-full"
             size="lg"
           >
-            <GitHub className="mr-2 h-5 w-5" />
+            <Github className="mr-2 h-5 w-5" />
             Sign in with GitHub
           </Button>
         </CardContent>

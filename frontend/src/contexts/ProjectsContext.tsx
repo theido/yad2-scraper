@@ -42,6 +42,8 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     fetchProjects()
+    // fetchProjects is intentionally called only on initial mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const addProject = async (project: Project) => {
@@ -62,11 +64,11 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
         title: 'Success',
         description: 'Project added successfully',
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error adding project:', error)
       toast({
         title: 'Error',
-        description: error.message || 'Failed to add project',
+        description: error instanceof Error ? error.message : 'Failed to add project',
         variant: 'destructive',
       })
       throw error
@@ -91,11 +93,11 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
         title: 'Success',
         description: 'Project updated successfully',
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating project:', error)
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update project',
+        description: error instanceof Error ? error.message : 'Failed to update project',
         variant: 'destructive',
       })
       throw error
@@ -120,11 +122,11 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
         title: 'Success',
         description: 'Project deleted successfully',
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error deleting project:', error)
       toast({
         title: 'Error',
-        description: error.message || 'Failed to delete project',
+        description: error instanceof Error ? error.message : 'Failed to delete project',
         variant: 'destructive',
       })
       throw error
@@ -147,6 +149,7 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useProjects() {
   const context = useContext(ProjectsContext)
   if (context === undefined) {

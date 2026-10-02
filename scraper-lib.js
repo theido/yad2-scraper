@@ -147,6 +147,56 @@ const buildNextDataListingLink = (token, slug, fallbackUrl) => {
   return fallbackUrl;
 };
 
+const BOT_DETECTION_PATTERNS = [
+  'shieldsquare captcha',
+  'radware page',
+  'radware',
+  'bot manager',
+  'please enable javascript and cookies',
+  'captcha'
+];
+
+const extractCaptchaDigest = (html) => {
+  const match = String(html || '').match(/Captcha Digest:\s*<strong>([^<]+)<\/strong>/i);
+  return match ? match[1].trim() : '';
+};
+
+const createBotDetectionError = (reason) => {
+  const error = new Error(reason || 'Bot detection');
+  error.code = 'BOT_DETECTION';
+  return error;
+};
+
+const detectBotProtection = ($, html) => {
+  const titleText = ($?.('title').first().text() || '').trim();
+  const normalizedTitle = titleText.toLowerCase();
+  const htmlText = String(html || '');
+  const htmlLower = htmlText.toLowerCase();
+  const captchaDigest = extractCaptchaDigest(htmlText);
+
+  const withDigest = (baseReason) => (
+    captchaDigest ? `${baseReason} (captcha digest: ${captchaDigest})` : baseReason
+  );
+
+  if (normalizedTitle === 'shieldsquare captcha') {
+    return withDigest('ShieldSquare Captcha');
+  }
+
+  if (normalizedTitle === 'radware page') {
+    return withDigest('Radware Page');
+  }
+
+  if (BOT_DETECTION_PATTERNS.some((pattern) => normalizedTitle.includes(pattern))) {
+    return withDigest(titleText || 'Bot detection');
+  }
+
+  if (BOT_DETECTION_PATTERNS.some((pattern) => htmlLower.includes(pattern))) {
+    return withDigest(titleText || 'Bot detection');
+  }
+
+  return '';
+};
+
 const extractListingsFromNextData = ($, fallbackUrl) => {
   const nextDataRaw = $('#__NEXT_DATA__').html();
   if (!nextDataRaw) {
@@ -202,10 +252,9 @@ const extractListingsFromNextData = ($, fallbackUrl) => {
 
 const extractListingsFromHtml = (html, fallbackUrl) => {
   const $ = cheerio.load(html);
-  const titleText = $('title').first().text();
-
-  if (titleText === 'ShieldSquare Captcha') {
-    throw new Error('Bot detection');
+  const botProtectionReason = detectBotProtection($, html);
+  if (botProtectionReason) {
+    throw createBotDetectionError(`Bot detection: ${botProtectionReason}`);
   }
 
   const anchorListings = extractListingsFromAnchors($);
@@ -225,6 +274,9 @@ const extractListingsFromHtml = (html, fallbackUrl) => {
 };
 
 module.exports = {
+  createBotDetectionError,
+  detectBotProtection,
+  extractCaptchaDigest,
   extractListingsFromHtml,
   formatPrice,
   normalizeListingLink
