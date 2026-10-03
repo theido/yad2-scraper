@@ -73,6 +73,23 @@ const pageLooksReady = (html) => {
   return nextDataContainsListing(html);
 };
 
+const readPageContentStable = async (page, { attempts = 5, delayMs = 250 } = {}) => {
+  let lastError;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await page.content();
+    } catch (error) {
+      lastError = error;
+      const isNavigationRace = /page is navigating|changing the content/i.test(error?.message || '');
+      if (!isNavigationRace || attempt === attempts) throw error;
+      await page.waitForTimeout(delayMs);
+    }
+  }
+
+  throw lastError;
+};
+
 const fetchYad2ViaChrome = async (url) => {
   let chromium;
   try {
@@ -102,10 +119,10 @@ const fetchYad2ViaChrome = async (url) => {
 
     const startedAt = Date.now();
     const waitMs = getWaitTimeoutMs();
-    let latestHtml = await page.content();
+    let latestHtml = await readPageContentStable(page);
 
     while (Date.now() - startedAt < waitMs) {
-      latestHtml = await page.content();
+      latestHtml = await readPageContentStable(page);
       if (pageLooksReady(latestHtml)) {
         return latestHtml;
       }
@@ -126,5 +143,6 @@ module.exports = {
   getChromeProfileDir,
   isHeadlessEnabled,
   nextDataContainsListing,
-  pageLooksReady
+  pageLooksReady,
+  readPageContentStable
 };

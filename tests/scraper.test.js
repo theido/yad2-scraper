@@ -5,7 +5,7 @@ const os = require('os');
 const path = require('path');
 
 const { extractCaptchaDigest, extractListingsFromHtml } = require('../scraper-lib');
-const { pageLooksReady } = require('../yad2-browser-fetcher');
+const { pageLooksReady, readPageContentStable } = require('../yad2-browser-fetcher');
 const scraper = require('../scraper');
 
 test('assertHealthyListingResult rejects an unexpected empty result set', () => {
@@ -131,6 +131,23 @@ test('pageLooksReady stays false on captcha pages and true on listing pages', ()
   assert.equal(pageLooksReady(emptyNextDataHtml), false);
   assert.equal(pageLooksReady(listingHtml), true);
   assert.equal(pageLooksReady(loadingShellHtml), false);
+});
+
+test('readPageContentStable retries while Chrome is navigating', async () => {
+  let attempts = 0;
+  const page = {
+    async content() {
+      attempts += 1;
+      if (attempts < 3) {
+        throw new Error('Unable to retrieve content because the page is navigating and changing the content.');
+      }
+      return '<html>ready</html>';
+    },
+    async waitForTimeout() {}
+  };
+
+  assert.equal(await readPageContentStable(page, { attempts: 3, delayMs: 0 }), '<html>ready</html>');
+  assert.equal(attempts, 3);
 });
 
 test('syncTopicToNotion fails when a database is configured without a token', async (t) => {
