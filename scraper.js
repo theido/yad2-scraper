@@ -305,8 +305,9 @@ const scrape = async (project, settings) => {
             );
         }
     } catch (e) {
-        if (e?.code === 'BOT_DETECTION') {
-            console.warn(`Bot protection persisted for ${project.topic}: ${e.message}`);
+        if (e?.code === 'BOT_DETECTION' || e?.code === 'YAD2_PAGE_NOT_READY') {
+            console.warn(`Skipping ${project.topic} after browser readiness failure: ${e.message}`);
+            return false;
         }
 
         let errMsg = e?.message || "";
