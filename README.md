@@ -108,7 +108,7 @@ Notes:
 
 #### GitHub self-hosted runner
 
-Register this Mac as a repository runner in **Settings → Actions → Runners → New self-hosted runner**. Run the agent from the logged-in macOS user session so Chrome can open a window. The workflow targets `[self-hosted, macOS]` and keeps its Chrome profile under `~/.yad2-scraper/chrome-profile` across runs.
+Register this Mac as a repository runner in **Settings → Actions → Runners → New self-hosted runner**, with the custom label `yad2-browser`. Run the agent from the logged-in macOS user session so Chrome can open a window. The workflow targets `[self-hosted, macOS, yad2-browser]` and keeps its Chrome profile under `~/.yad2-scraper/chrome-profile` across runs.
 
 The scheduled trigger remains commented out while this path is being validated. Start it manually with **Actions → Yad2 Scraper → Run workflow**.
 

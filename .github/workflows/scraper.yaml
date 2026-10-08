@@ -13,7 +13,7 @@ jobs:
   scraper:
     # Yad2 blocks GitHub-hosted datacenter runners. This job must run from a
     # logged-in macOS user session so headful Chrome can execute the challenge.
-    runs-on: [self-hosted, macOS]
+    runs-on: [self-hosted, macOS, yad2-browser]
     timeout-minutes: 15
     permissions:
       contents: write
