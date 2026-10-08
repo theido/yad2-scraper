@@ -12,7 +12,7 @@ const {
 } = require('./config-lib');
 const { syncListingsToNotion } = require('./notion-lib');
 const { extractListingsFromHtml, createBotDetectionError } = require('./scraper-lib');
-const { fetchYad2ViaChrome } = require('./yad2-browser-fetcher');
+const { closeYad2Browser, fetchYad2ViaChrome } = require('./yad2-browser-fetcher');
 
 const BOT_RETRY_DELAYS_MS = [1500, 4000, 8000];
 
@@ -305,11 +305,6 @@ const scrape = async (project, settings) => {
             );
         }
     } catch (e) {
-        if (e?.code === 'BOT_DETECTION' || e?.code === 'YAD2_PAGE_NOT_READY') {
-            console.warn(`Skipping ${project.topic} after browser readiness failure: ${e.message}`);
-            return false;
-        }
-
         let errMsg = e?.message || "";
         if (errMsg) {
             errMsg = `Error: ${errMsg}`;
@@ -372,8 +367,12 @@ const program = async () => {
     });
 
     if (getYad2FetchMode() === 'chrome') {
-        for (const project of projects) {
-            await scrape(project, runtimeConfig.settings);
+        try {
+            for (const project of projects) {
+                await scrape(project, runtimeConfig.settings);
+            }
+        } finally {
+            await closeYad2Browser();
         }
         return;
     }

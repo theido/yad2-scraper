@@ -11,38 +11,44 @@ on:
 
 jobs:
   scraper:
-    runs-on: ubuntu-latest
+    # Yad2 blocks GitHub-hosted datacenter runners. This job must run from a
+    # logged-in macOS user session so headful Chrome can execute the challenge.
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 15
     permissions:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
-          cache: yarn
+          cache: npm
 
       - name: Install packages
-        run: yarn install --frozen-lockfile --non-interactive
+        run: npm ci --no-audit --no-fund
 
       - name: Setup git config
         run: |
           git config user.name "GitHub Actions"
-          git config user.email "${{ secrets.GIT_CONFIG_EMAIL }}"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Run scraper
+        env:
+          API_TOKEN: ${{ secrets.API_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+          NOTION_API_TOKEN: ${{ secrets.NOTION_API_TOKEN }}
+          SCRAPER_PROJECTS: ${{ vars.SCRAPER_PROJECTS }}
         run: |
-          export API_TOKEN=${{ secrets.API_TOKEN }}
-          export CHAT_ID=${{ secrets.CHAT_ID }}
           export YAD2_FETCH_MODE=chrome
-          export YAD2_CHROME_HEADLESS=1
-          export YAD2_CHROME_WAIT_MS=60000
-          export CHROME_EXECUTABLE_PATH="$(command -v google-chrome)"
-          test -n "$CHROME_EXECUTABLE_PATH"
+          export YAD2_CHROME_HEADLESS=0
+          export YAD2_CHROME_PROFILE_DIR="$HOME/.yad2-scraper/chrome-profile"
+          export CHROME_EXECUTABLE_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+          test -x "$CHROME_EXECUTABLE_PATH"
           "$CHROME_EXECUTABLE_PATH" --version
-          yarn scrape
+          npm run scrape
 
       - name: Push new json data if needed
         run: |

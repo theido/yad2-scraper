@@ -5,7 +5,11 @@ const os = require('os');
 const path = require('path');
 
 const { extractCaptchaDigest, extractListingsFromHtml } = require('../scraper-lib');
-const { pageLooksReady, readPageContentStable } = require('../yad2-browser-fetcher');
+const {
+  Yad2BrowserSession,
+  pageLooksReady,
+  responseLooksUsable
+} = require('../yad2-browser-fetcher');
 const scraper = require('../scraper');
 
 test('assertHealthyListingResult rejects an unexpected empty result set', () => {
@@ -133,21 +137,125 @@ test('pageLooksReady stays false on captcha pages and true on listing pages', ()
   assert.equal(pageLooksReady(loadingShellHtml), false);
 });
 
-test('readPageContentStable retries while Chrome is navigating', async () => {
-  let attempts = 0;
+test('responseLooksUsable accepts a genuine empty Yad2 result page', () => {
+  const emptyNextDataHtml = `<!doctype html><html><head><title>נדל"ן</title>
+    <script id="__NEXT_DATA__" type="application/json">{"props":{"pageProps":{"dehydratedState":{"queries":[]}}}}</script>
+    </head><body><main></main></body></html>`;
+
+  assert.equal(pageLooksReady(emptyNextDataHtml), false);
+  assert.equal(responseLooksUsable(emptyNextDataHtml), true);
+});
+
+const makeBrowserSessionFixture = (responses) => {
+  const calls = { clearCookies: 0, evaluate: 0, evaluateArgs: [], goto: [], launches: 0 };
   const page = {
-    async content() {
-      attempts += 1;
-      if (attempts < 3) {
-        throw new Error('Unable to retrieve content because the page is navigating and changing the content.');
-      }
-      return '<html>ready</html>';
+    async goto(url) {
+      calls.goto.push(url);
     },
-    async waitForTimeout() {}
+    async waitForTimeout() {},
+    async evaluate(_callback, argument) {
+      calls.evaluateArgs.push(argument);
+      const response = responses[Math.min(calls.evaluate, responses.length - 1)];
+      calls.evaluate += 1;
+      return response;
+    }
+  };
+  const context = {
+    pages: () => [page],
+    async clearCookies() {
+      calls.clearCookies += 1;
+    },
+    async close() {}
+  };
+  const chromium = {
+    async launchPersistentContext() {
+      calls.launches += 1;
+      return context;
+    }
   };
 
-  assert.equal(await readPageContentStable(page, { attempts: 3, delayMs: 0 }), '<html>ready</html>');
-  assert.equal(attempts, 3);
+  return { calls, chromium };
+};
+
+test('Yad2BrowserSession primes once and reuses one persistent browser', async () => {
+  const validHtml = '<html><a href="/item/abc123">listing</a></html>';
+  const { calls, chromium } = makeBrowserSessionFixture([
+    { status: 200, body: validHtml },
+    { status: 200, body: validHtml }
+  ]);
+  const session = new Yad2BrowserSession({
+    chromium,
+    executablePath: process.execPath,
+    profileDir: '/tmp/test-yad2-profile',
+    retries: 2,
+    requestTimeoutMs: 1234,
+    retryDelayMs: 0,
+    primeSettleMs: 0
+  });
+
+  assert.equal(await session.fetch('https://www.yad2.co.il/realestate/forsale?city=1'), validHtml);
+  assert.equal(await session.fetch('https://www.yad2.co.il/realestate/forsale?city=2'), validHtml);
+  assert.equal(calls.launches, 1);
+  assert.equal(calls.goto.length, 1);
+  assert.equal(calls.evaluate, 2);
+  assert.equal(calls.evaluateArgs[0].timeoutMs, 1234);
+});
+
+test('Yad2BrowserSession accepts a valid page with zero listings', async () => {
+  const emptyHtml = '<html><script id="__NEXT_DATA__" type="application/json">{"props":{"pageProps":{}}}</script></html>';
+  const { chromium } = makeBrowserSessionFixture([{ status: 200, body: emptyHtml }]);
+  const session = new Yad2BrowserSession({
+    chromium,
+    executablePath: process.execPath,
+    profileDir: '/tmp/test-yad2-profile',
+    retries: 1,
+    retryDelayMs: 0,
+    primeSettleMs: 0
+  });
+
+  assert.equal(await session.fetch('https://www.yad2.co.il/realestate/forsale'), emptyHtml);
+});
+
+test('Yad2BrowserSession clears cookies, re-primes, and retries a Radware page', async () => {
+  const challengeHtml = '<html><head><title>Radware Bot Manager Captcha</title></head></html>';
+  const validHtml = '<html><a href="/item/recovered">listing</a></html>';
+  const { calls, chromium } = makeBrowserSessionFixture([
+    { status: 200, body: challengeHtml },
+    { status: 200, body: validHtml }
+  ]);
+  const session = new Yad2BrowserSession({
+    chromium,
+    executablePath: process.execPath,
+    profileDir: '/tmp/test-yad2-profile',
+    retries: 2,
+    retryDelayMs: 0,
+    primeSettleMs: 0
+  });
+
+  assert.equal(await session.fetch('https://www.yad2.co.il/realestate/forsale'), validHtml);
+  assert.equal(calls.clearCookies, 1);
+  assert.equal(calls.goto.length, 2);
+});
+
+test('Yad2BrowserSession reports an observable failure when every signed fetch is blocked', async () => {
+  const challengeHtml = '<html><head><title>Radware Bot Manager Captcha</title></head></html>';
+  const { chromium } = makeBrowserSessionFixture([
+    { status: 200, body: challengeHtml },
+    { status: 200, body: challengeHtml }
+  ]);
+  const session = new Yad2BrowserSession({
+    chromium,
+    executablePath: process.execPath,
+    profileDir: '/tmp/test-yad2-profile',
+    retries: 2,
+    retryDelayMs: 0,
+    primeSettleMs: 0
+  });
+
+  await assert.rejects(
+    session.fetch('https://www.yad2.co.il/realestate/forsale'),
+    (error) => error.code === 'BOT_DETECTION' && /2 attempts/.test(error.message)
+  );
 });
 
 test('syncTopicToNotion fails when a database is configured without a token', async (t) => {
