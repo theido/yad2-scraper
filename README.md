@@ -198,6 +198,36 @@ Then open `http://127.0.0.1:4312`. This local admin page can:
 - assign a `notionDatabaseId` per topic
 - browse accessible Notion databases using the current `NOTION_API_TOKEN`
 
+#### Tailnet-only admin with GitHub synchronization
+
+Sync is **opt-in** (`ADMIN_GITHUB_SYNC=1`), and the server binds to `127.0.0.1:4312` by default. It only updates **theido/yad2-scraper → SCRAPER_PROJECTS**, never a repository supplied by a browser. Install/authenticate `gh` on the server with permission to edit repository Actions variables. Credentials and Notion tokens remain in the server environment / gh credential store; never put tokens in config or browser fields. Repository variables are not secret storage.
+
+Example (replace `your-mac.your-tailnet.ts.net` with this machine's exact Tailscale HTTPS name):
+
+```bash
+ADMIN_GITHUB_SYNC=1 \
+ADMIN_CONFIG_PATH=/Users/idoz/workspace/yad2-scraper/config.json \
+ADMIN_ALLOWED_HOSTS='127.0.0.1:4312,localhost:4312,your-mac.your-tailnet.ts.net:9446' \
+ADMIN_ALLOWED_ORIGINS='http://127.0.0.1:4312,http://localhost:4312,https://your-mac.your-tailnet.ts.net:9446' \
+npm run admin
+```
+
+In a separate terminal:
+
+```bash
+tailscale serve --bg --https=9446 http://127.0.0.1:4312
+```
+
+Open `https://your-mac.your-tailnet.ts.net:9446`. Use **Serve**, not Funnel: do not expose this unauthenticated app to the public internet. Tailnet ACLs/grants should restrict port 9446 to trusted admin users/devices; any permitted user has full admin access. Keep the backend loopback-only. Host/Origin entries are exact, comma-separated allowlists including non-default ports; do not use wildcards. Forwarded headers are not trusted. No wildcard CORS is enabled; mutating requests require an allowed Origin and JSON, with a 48 KiB body limit.
+
+With sync enabled, GitHub is the source on every refresh. Starting the admin does **not** upload local config or overwrite local files. On GitHub read failure, the UI explicitly displays a local fallback and disables Save. A save writes the complete normalized settings and projects (including default/per-topic Telegram and Notion routing), reads the exact variable back, verifies its value, then persists locally to `ADMIN_CONFIG_PATH` (default: this checkout's `config.json`). GitHub requests use `execFile` with JSON on stdin, 15-second process timeouts, and bounded output; no config is shell-interpolated. An uncertain write/read-back failure leaves local config untouched; refresh before retrying. A local persistence error after a verified GitHub write explicitly reports the partial success.
+
+The API requires the version returned by GET for PUT and serializes saves within one server process. Stale tabs receive 409 and must refresh. **Limitation:** GitHub variables provide no atomic compare-and-swap, so another process or direct GitHub editor can still race between the pre-write read and PATCH. Run only one admin process and avoid concurrent external variable edits.
+
+This changes the variable used by the **next** workflow run, not the workflow YAML. It does **not** register/start a self-hosted runner, dispatch an Action, enable the commented schedule, or alter the local cron. Runner/schedule activation remains a separate explicit step. `ADMIN_CONFIG_PATH` points at an existing local scraper config without changing the original code/worktree; successful explicit saves will update that file.
+
+Verification: `npm ci && npm test`. Admin integration tests use an injected fake gh and in-memory local storage; they do not write real GitHub variables or the original scraper config.
+
 #### Telegram admin commands
 
 If you want to manage `config.json` from your phone through the same Telegram bot token, run:

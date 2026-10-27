@@ -1,10 +1,12 @@
 const state = {
   config: null,
+  version: null,
+  sync: { enabled: false, status: "loading" },
   notionDatabases: []
 };
 
 const el = {
-  configPath: document.querySelector('#config-path'),
+  syncStatus: document.querySelector('#sync-status'),
   projectCount: document.querySelector('#project-count'),
   notionStatus: document.querySelector('#notion-status'),
   saveButton: document.querySelector('#save-button'),
@@ -193,13 +195,21 @@ const renderProjects = () => {
 
 const updateStatus = () => {
   el.projectCount.textContent = String(state.config.projects.length);
-  fillDefaults();
+};
+
+const applySync = ({ version, sync, source }) => {
+  state.version = version;
+  state.sync = sync;
+  el.saveButton.disabled = !version;
+  el.syncStatus.textContent = sync.enabled
+    ? (sync.status === 'error' ? sync.error : `GitHub sync enabled — ${sync.status} (${source})`)
+    : 'Local only — GitHub sync disabled';
 };
 
 const loadConfig = async () => {
-  const { config, configPath } = await fetchJson('/api/config');
-  state.config = config;
-  el.configPath.textContent = configPath;
+  const result = await fetchJson('/api/config');
+  state.config = result.config;
+  applySync(result);
   fillDefaults();
   renderProjects();
 };
@@ -253,8 +263,10 @@ el.projectForm.addEventListener('submit', (event) => {
 el.clearForm.addEventListener('click', resetForm);
 
 el.refreshButton.addEventListener('click', async () => {
-  await Promise.all([loadConfig(), loadStatus(), loadDatabases()]);
-  showToast('Refreshed.');
+  try {
+    await Promise.all([loadConfig(), loadStatus(), loadDatabases()]);
+    showToast('Refreshed.');
+  } catch (error) { showToast(error.message, 'error'); }
 });
 
 el.saveButton.addEventListener('click', async () => {
@@ -263,15 +275,21 @@ el.saveButton.addEventListener('click', async () => {
     state.config.settings.defaultNotionDatabaseId = el.defaultNotionDatabaseId.value.trim();
     state.config.settings.notionTokenEnv = el.notionTokenEnv.value.trim() || 'NOTION_API_TOKEN';
 
-    const { config } = await fetchJson('/api/config', {
+    el.saveButton.disabled = true;
+    const result = await fetchJson('/api/config', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ config: state.config })
+      body: JSON.stringify({ config: state.config, version: state.version })
     });
-    state.config = config;
+    state.config = result.config;
+    applySync(result);
+    fillDefaults();
     renderProjects();
-    showToast('Config saved to config.json.');
+    showToast(result.sync.enabled ? 'GitHub verified; local config saved.' : 'Local config saved.');
   } catch (error) {
+    state.version = null;
+    el.saveButton.disabled = true;
+    el.syncStatus.textContent = `Save error — ${error.message} Refresh before retrying.`;
     showToast(error.message, 'error');
   }
 });
@@ -280,4 +298,8 @@ el.saveButton.addEventListener('click', async () => {
   await loadConfig();
   await loadStatus();
   await loadDatabases();
-})();
+})().catch(error => {
+  el.saveButton.disabled = true;
+  el.syncStatus.textContent = `Load error — ${error.message}`;
+  showToast(error.message, 'error');
+});
