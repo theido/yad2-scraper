@@ -88,21 +88,29 @@ Edit `config.json` directly:
 
 ### Running:
 - **Local**: `npm run scrape`
-- **GitHub**: Push and wait for the workflow to run
+- **GitHub**: the scraper workflow requires a macOS `self-hosted` runner; GitHub-hosted datacenter runners are blocked by Yad2
 
-#### Optional: Chrome-assisted local mode
+#### Chrome browser-session mode
 
-If Yad2 starts returning Radware / captcha pages, you can switch the local scraper to a real Chrome session:
+Yad2's Radware challenge requires a real, headful browser on a residential connection. Chrome mode opens one persistent session, primes Yad2, and performs subsequent requests through the page's signed `window.fetch`:
 
 ```bash
 YAD2_FETCH_MODE=chrome YAD2_CHROME_HEADLESS=0 npm run scrape
 ```
 
 Notes:
-- the scraper will use `playwright-core` with the local Google Chrome app
-- a persistent Chrome profile is stored under `.yad2-chrome-profile/`
-- if a captcha window opens, solve it in that Chrome session and rerun the scraper
-- in chrome mode, topics are processed sequentially to avoid opening multiple browser windows at once
+- the scraper uses `playwright-core` with the local Google Chrome app
+- the reusable profile defaults to `~/.yad2-scraper/chrome-profile`; override it with `YAD2_CHROME_PROFILE_DIR`
+- Chrome must run headful from a logged-in desktop session; headless mode is expected to receive a captcha
+- the session retries JavaScript challenges with a fresh cookie state; visible CAPTCHAs are reported as failures
+- topics are processed sequentially through the same browser session
+- Radware responses fail the run instead of being reported as a successful empty scan
+
+#### GitHub self-hosted runner
+
+Register this Mac as a repository runner in **Settings → Actions → Runners → New self-hosted runner**, with the custom label `yad2-browser`. Run the agent from the logged-in macOS user session so Chrome can open a window. The workflow targets `[self-hosted, macOS, yad2-browser]` and keeps its Chrome profile under `~/.yad2-scraper/chrome-profile` across runs.
+
+The scheduled trigger remains commented out while this path is being validated. Start it manually with **Actions → Yad2 Scraper → Run workflow**.
 
 If you want to disable a scraping topic, you can add a `"disabled": true` field in the `config.json` under a project in the projects list:
 ```
